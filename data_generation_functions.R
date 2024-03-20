@@ -21,15 +21,13 @@ non_lin_fork <- function(N){
 uniform_noise <- function(N) {
   X1 = rnorm(N, 1, 1)
   X2 = rnorm(N, 0, 1)
-  X3_mean = X2 + X1 + X2 * X1
-  X4_mean = X2 + X1 + X2 * X1
-  X3 = X3_mean + runif(N, min=-2, max=2)  
-  X4 = X4_mean + runif(N, min=-2, max=2)  
+  X3 = X2 + X1 + X2 * X1 + runif(N, min=-2, max=2) 
+  X4 = X2 + X1 + X2 * X1 + runif(N, min=-2, max=2)
   df <- data.frame(X1, X2, X3, X4)
   return(df)
 }
 
-model5_exponential_adjusted <- function(N) {
+exponential_adjusted <- function(N) {
   X1 = rnorm(N, 1, 1)
   X2 = rnorm(N, 0, 1)
   X3_mean = X2 + X1 + X2 * X1
