@@ -1,6 +1,6 @@
 
 # The fork
-model1 <- function(N){
+normal_fork <- function(N){
   X1 = rnorm(N,0,1)
   X2 = rnorm(N,X1,1)
   X3 = rnorm(N,X1,1)
@@ -8,17 +8,8 @@ model1 <- function(N){
   return(df)
 }
 
-# The Pipe
-model2 <- function(N){
-  X2 = rnorm(N,1,1)
-  X1 = rnorm(N,X2,1)
-  X3 = rnorm(N,X1,1)
-  df <- data.frame(X1, X2, X3)
-  return(df)
-}
-
 # The fork non-linear
-model3 <- function(N){
+non_lin_fork <- function(N){
   X1 = rnorm(N,1,1)
   X2 = cos(X1)  + rnorm(N,0,0.1)
   X3 = log(abs(X1)) + rnorm(N,0,0.5)
@@ -26,26 +17,8 @@ model3 <- function(N){
   return(df)
 }
 
-model4 <- function(N){
-  X1 = rnorm(N,1,1)
-  X2 = rnorm(N,0,1)
-  X3 = rnorm(N,X2 + X1,1)
-  X4 = rnorm(N,X2 + X1,1)
-  df <- data.frame(X1,X2,X3,X4)
-  return(df)
-}
 
-
-model5 <- function(N){
-  X1 = rnorm(N,1,1)
-  X2 = rnorm(N,0,1)
-  X3 = rnorm(N,X2 + X1 + X2*X1,1)
-  X4 = rnorm(N,X2 + X1 + X2*X1,1)
-  df <- data.frame(X1,X2,X3,X4)
-  return(df)
-}
-
-model5_non_normal <- function(N) {
+uniform_noise <- function(N) {
   X1 = rnorm(N, 1, 1)
   X2 = rnorm(N, 0, 1)
   X3_mean = X2 + X1 + X2 * X1
@@ -56,7 +29,21 @@ model5_non_normal <- function(N) {
   return(df)
 }
 
-model6 <- function(N){
+model5_exponential_adjusted <- function(N) {
+  X1 = rnorm(N, 1, 1)
+  X2 = rnorm(N, 0, 1)
+  X3_mean = X2 + X1 + X2 * X1
+  X4_mean = X2 + X1 + X2 * X1
+  rate_param = 1
+  X3_errors = rexp(N, rate = rate_param) - (1 / rate_param)
+  X4_errors = rexp(N, rate = rate_param) - (1 / rate_param)
+  X3 = X3_mean + X3_errors
+  X4 = X4_mean + X4_errors
+  df <- data.frame(X1, X2, X3, X4)
+  return(df)
+}
+
+non_lin_norm2 <- function(N){
   X1 = rnorm(N,1,1)
   X2 = rnorm(N,0,1)
   X3 = rnorm(N,exp(X2*X1),1)
@@ -66,17 +53,7 @@ model6 <- function(N){
 }
 
 
-model7 <- function(N){
-  X1 = rnorm(N,1,1)
-  X2 = X1 + rnorm(N,0,1)
-  X3 = X1 + X2 + rnorm(N,0,1)
-  X4 = X1 + X2 + rnorm(N,0,1)
-  X5 = X3 + X4 + rnorm(N,0,1)
-  df <- data.frame(X1, X2, X3, X4, X5)
-  return(df)
-}
-
-model8 <- function(N){
+non_lin_norm3 <- function(N){
   X1 = rnorm(N,1,1)
   X2 = X1 + rnorm(N,0,1)
   X3 = X1*X2 + rnorm(N,0,1)
@@ -86,20 +63,7 @@ model8 <- function(N){
   return(df)
 }
 
-model9 <- function(N) {
-  X1 <- rbinom(N, 1, 0.5)  # A binary variable
-  X2 <- sapply(X1, function(a) {
-    if (a == 0) sample(c("A", "B", "C"), 1, prob = c(0.7, 0.2, 0.1))
-    else sample(c("A", "B", "C"), 1, prob = c(0.3, 0.3, 0.4))
-  })
-  X3 <- X1 * rnorm(N, 2, 1) + (X2 == "A") * rnorm(N, 0, 1) + (X2 == "B") * rnorm(N, 1, 1) + (X2 == "C") * rnorm(N, 3, 1)
-  X4 <- X1 * rnorm(N, -2, 1) + (X2 == "A") * rnorm(N, 1, 1) + (X2 == "B") * rnorm(N, 0, 1) + (X2 == "C") * rnorm(N, -3, 1)
-  X5 <- log(abs(X3*X4)) + rnorm(N,0,1)
-  df <- data.frame(X1,X2,X3,X4,X5)
-  return(df)
-}
-
-model10 <- function(N) {
+diff_data_types <- function(N) {
   X1 <- rnorm(N)
   X2 <- rnorm(N,exp(X1),1) 
   x3b1 <- X1 + X2 - X1*X2
