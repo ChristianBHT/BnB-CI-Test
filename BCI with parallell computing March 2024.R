@@ -156,11 +156,10 @@ library(pbapply)
   cl <- makeCluster(detectCores()-1, type = "PSOCK")
   
   
-  for (N in c(500,1000)){
-    size_test_set <- 100 # Size of test set
-    p = 1 - (size_test_set/N)
+  for (N in c(1000, 3200)){
+    p = 0.8
     R <- 1000 # Number of bootstrap samples
-    no_tests <- 100 # Number of tests
+    no_tests <- 25 # Number of tests
     seed <- N # Set seed for reproducibility
     
     output_matrix <- matrix(vector("list", no_tests * 2), nrow=no_tests, ncol = 2)
@@ -208,5 +207,5 @@ library(pbapply)
   
   stopCluster(cl)
   
-  output_matrix
+  load("output_matrix_N_1000.rds")
   

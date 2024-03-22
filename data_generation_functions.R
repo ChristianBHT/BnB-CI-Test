@@ -85,7 +85,7 @@ random_Z_effects <- function(N) {
     Z[, i] <- error_functions[[error_type]](N)
   }
   
-  relationship_types <- c("linear", "quadratic", "exponential")
+  relationship_types <- c("linear", "quadratic")
   
   X <- rep(0, N)
   Y <- rep(0, N)
@@ -98,21 +98,17 @@ random_Z_effects <- function(N) {
       X <- X + Z[,i]
     } else if (rel_type_X == "quadratic") {
       X <- X + (Z[,i]^2)
-    } else if (rel_type_X == "exponential") {
-      X <- X + exp(Z[,i])
-    }
+    } 
     
     if (rel_type_Y == "linear") {
       Y <- Y + Z[,i]
     } else if (rel_type_Y == "quadratic") {
       Y <- Y + (Z[,i]^2)
-    } else if (rel_type_Y == "exponential") {
-      Y <- Y + exp(Z[,i])
-    }
+    } 
   }
   
-  X <- X + rnorm(N,0,1)
-  Y <- Y + rnorm(N,0,1)
+  X <- X + runif(N, min = -2, max = 2)
+  Y <- Y + runif(N, min = -2, max = 2)
   
   df <- data.frame(cbind(Z, X = X, Y = Y))
   
