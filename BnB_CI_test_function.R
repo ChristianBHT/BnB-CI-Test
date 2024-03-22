@@ -282,20 +282,18 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
 
 # Testing example
 
-N = 1600
+N = 2000
 p = 0.9
-data <- model3(N)
+data <- uniform_noise(N)
 
-weights <- matrix(rdirichlet(1, c(rep(1,nrow(data)))), nrow = nrow(data), ncol = 1)
-test <- xgboost_test(data = data, formula = X2 ~ X3 + X1, p = p, eta = 0.1, bootstrap_sample = TRUE, weights = weights)
+test <- xgboost_test(data = data, formula = X3 ~ X4 + X1 + X2, p = p, eta = 0.1, bootstrap_sample = TRUE, weights = NULL)
 test
 
 output <- list()
 R = 200
 for (i in 1:R) {
   
-  weights <- matrix(rdirichlet(1, c(rep(1,nrow(data)))), nrow = nrow(data), ncol = 1)
-  output[[i]] <- xgboost_test(data = data, formula = X3 ~ X2 + X1 , p = p, eta = 0.1,  bootstrap_sample = TRUE, weights = weights)
+  output[[i]] <- xgboost_test(data = data, formula = X3 ~ X4 + X1 + X2 , p = p, eta = 0.1,  bootstrap_sample = TRUE, weights = NULL)
   # Calculate progress 
   cat(sprintf("Bootstrap sample: %d\r", i))
   flush.console()
@@ -305,25 +303,14 @@ for (i in 1:R) {
 
 output_df <- do.call(rbind, output)
 output_df <- data.frame(output_df)
-hist(as.numeric(output_df$diff_met2))
+hist(as.numeric(output_df$diff_met2), breaks = 30)
 hist(as.numeric(output_df$diff_met1))
-
-
-
-N = 3200
-p = 0.9
-data <- model3(N)
-
-weights <- matrix(rdirichlet(1, c(rep(1,nrow(data)))), nrow = nrow(data), ncol = 1)
-test <- xgboost_test(data = data, formula = X2 ~ X3 + X1, p = p, eta = 0.1, bootstrap_sample = TRUE, weights = weights)
-test
 
 output <- list()
 R = 200
 for (i in 1:R) {
-  
   weights <- matrix(rdirichlet(1, c(rep(1,nrow(data)))), nrow = nrow(data), ncol = 1)
-  output[[i]] <- xgboost_test(data = data, formula = X3 ~ X2 + X1 , p = p, eta = 0.1,  bootstrap_sample = TRUE, weights = weights)
+  output[[i]] <- xgboost_test(data = data, formula = X3 ~ X4 + X1 + X2, p = p, eta = 0.1,  bootstrap_sample = TRUE, weights = weights)
   # Calculate progress 
   cat(sprintf("Bootstrap sample: %d\r", i))
   flush.console()
@@ -332,28 +319,8 @@ for (i in 1:R) {
 }
 
 output_df2 <- do.call(rbind, output)
-output_df2 <- data.frame(output_df2)
-hist(as.numeric(output_df2$diff_met2))
-hist(as.numeric(output_df2$diff_met1))
-output_df2$ratio1 <- as.numeric(output_df2$mod1_metric1)/as.numeric(output_df2$mod2_metric1)
-hist(output_df2$ratio1)
+output_df2 <- data.frame(output_df)
+hist(as.numeric(output_df2$diff_met2), breaks = 30)
 
 
-output <- list()
-R = 200
-for (i in 1:R) {
-  
-  weights <- matrix(rdirichlet(1, c(rep(1,nrow(data)))), nrow = nrow(data), ncol = 1)
-  output[[i]] <- xgboost_test(data = data, formula = X3 ~ X2 , p = p, eta = 0.1,  bootstrap_sample = TRUE, weights = weights)
-  # Calculate progress 
-  cat(sprintf("Bootstrap sample: %d\r", i))
-  flush.console()
-  Sys.sleep(0.1)
-  
-}
-
-output_df3 <- do.call(rbind, output)
-output_df3 <- data.frame(output_df3)
-output_df3$ratio1 <- as.numeric(output_df3$mod1_metric1)/as.numeric(output_df3$mod2_metric1)
-hist(output_df3$ratio1)
 

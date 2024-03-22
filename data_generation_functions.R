@@ -70,7 +70,7 @@ diff_data_types <- function(N) {
 }
 
 # 22 variable DAG with random noise variables randomly influencing X and Y
-simulate_Z_effects_advanced <- function(N) {
+random_Z_effects <- function(N) {
   Z <- data.frame(matrix(ncol = 20, nrow = N))
   names(Z) <- paste0("Z", 1:20)
   
@@ -119,22 +119,20 @@ simulate_Z_effects_advanced <- function(N) {
   return(df)
 }
 
+simulated_data_advanced <- data.frame(random_Z_effects(1000))
 
-
-
-
-
-
-
-
-
-
-
-
-simulated_data_advanced <- data.frame(simulate_Z_effects_advanced(1000))
-head(simulated_data_advanced)
-simulated_data_advanced$X
-simulated_data_advanced$Y
 plot(simulated_data_advanced$X, simulated_data_advanced$Y)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
