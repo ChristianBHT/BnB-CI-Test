@@ -156,15 +156,15 @@ library(pbapply)
   cl <- makeCluster(detectCores()-1, type = "PSOCK")
   
   
-  for (N in c(1000, 3200)){
+  for (N in c(100)){
     p = 0.8
-    R <- 1000 # Number of bootstrap samples
+    R <- 10 # Number of bootstrap samples
     no_tests <- 25 # Number of tests
     seed <- N # Set seed for reproducibility
     
     output_matrix <- matrix(vector("list", no_tests * 2), nrow=no_tests, ncol = 2)
     
-    clusterExport(cl,  varlist=c('random_Z_effects', 'xgboost_test', 'N', 'R', 'p', 'seed'), envir=environment())
+    clusterExport(cl,  varlist=c('random_Z_effects', 'xgboost_test', 'N', 'R', 'p', 'seed', 'no_tests'), envir=environment())
     clusterEvalQ(cl, c(library('ipred'),
                        library('caret'),
                        library('Metrics'),
@@ -191,21 +191,21 @@ library(pbapply)
       cond_var <- data.frame(data$Z1, data$Z2, data$Z3, data$Z4, data$Z5, data$Z6, data$Z7, data$Z8, data$Z9, data$Z10, data$Z11, data$Z12, data$Z13, data$Z14, data$Z15, data$Z16, data$Z17, data$Z18, data$Z19, data$Z20)
       gcm_test <- gcm.test(data$Y, data$X, Z = cond_var)
       
-      return(list(output = output, gcm_test = gcm_test))
+      return(list(Boot_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
     })
     
-    # Update the output_matrix with results
-    for (i in 1:length(results)) {
-      output_matrix[i, 1] <- list(results[[i]]$output)
-      output_matrix[i, 2] <- list(results[[i]]$gcm_test)
-    }
-    
+  
     # Save the output_matrix to a file
     filename <- paste0("output_matrix_N_", N, ".rds")
-    saveRDS(output_matrix, filename)
+    saveRDS(results, filename)
   }
   
   stopCluster(cl)
   
-  load("output_matrix_N_1000.rds")
+  
+output_matrix_N_100 <- readRDS("C:/ChristianThorjussen/BnB-CI-Test/output_matrix_N_100.rds")
+diff_met1_values <- sapply(output_matrix_N_3000[[1]]$output, function(x) x$diff_met1)  
+diff_met2_values <- sapply(output_matrix_N_3000[[1]]$output, function(x) x$diff_met2)  
+hist(diff_met2_values)
+  
   

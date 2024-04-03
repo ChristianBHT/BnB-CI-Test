@@ -69,10 +69,10 @@ diff_data_types <- function(N) {
   return(df)
 }
 
-# 22 variable DAG with random noise variables randomly influencing X and Y
-random_Z_effects <- function(N) {
-  Z <- data.frame(matrix(ncol = 20, nrow = N))
-  names(Z) <- paste0("Z", 1:20)
+# Variable DAG with random noise variables randomly influencing X and Y
+random_Z_effects <- function(N, Zs = 10) {
+  Z <- data.frame(matrix(ncol = Zs, nrow = N))
+  names(Z) <- paste0("Z", 1:Zs)
   
   error_functions <- list(
     normal = function(n) rnorm(n, mean = 0, sd = 1),
@@ -80,7 +80,7 @@ random_Z_effects <- function(N) {
     exp_adjusted = function(n) rexp(n, rate = 1) - 1 # Adjusted to have mean 0
   )
 
-  for (i in 1:20) {
+  for (i in 1:Zs) {
     error_type <- sample(names(error_functions), 1) # Randomly select an error type
     Z[, i] <- error_functions[[error_type]](N)
   }
@@ -90,7 +90,7 @@ random_Z_effects <- function(N) {
   X <- rep(0, N)
   Y <- rep(0, N)
   
-  for (i in 1:20) {
+  for (i in 1:Zs) {
     rel_type_X <- sample(relationship_types, 1)
     rel_type_Y <- sample(relationship_types, 1)
     
@@ -115,9 +115,10 @@ random_Z_effects <- function(N) {
   return(df)
 }
 
-simulated_data_advanced <- data.frame(random_Z_effects(1000))
+simulated_data_advanced <- data.frame(random_Z_effects(N = 1000, Zs = 3))
 
 plot(simulated_data_advanced$X, simulated_data_advanced$Y)
+
 
 
 
