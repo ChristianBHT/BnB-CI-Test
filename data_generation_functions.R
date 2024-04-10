@@ -1,3 +1,12 @@
+#Normal simple data
+normal_data <- function(N){
+  X1 <- rnorm(N,0,1)
+  X2 <- rnorm(N,0,1)
+  X3 <- rnorm(N,X1 + X2,1)
+  X4 <- rnorm(N,X1 + X2,1)
+  df <- data.frame(X1, X2, X3, X4)
+  return(df)
+}
 
 # The fork
 normal_fork <- function(N){
@@ -115,9 +124,6 @@ random_Z_effects <- function(N, Zs = 10) {
   return(df)
 }
 
-simulated_data_advanced <- data.frame(random_Z_effects(N = 1000, Zs = 3))
-
-plot(simulated_data_advanced$X, simulated_data_advanced$Y)
 
 
 

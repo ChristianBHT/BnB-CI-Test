@@ -5,7 +5,21 @@ library(caret)
 library(Metrics)
 library(dplyr)
 
-xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "reg:squarederror", early_stopping = 10, nrounds = 50, eta = 0.1, max_depth = c(1,2,3), num_class = NULL, subsample = 1, n_folds = 10, bootstrap_sample = FALSE, weights = NULL) {
+xgboost_test <- function(data = NULL, 
+                         formula = NULL,  
+                         p = NULL,  
+                         objective = "reg:squarederror", 
+                         early_stopping = 10, 
+                         nrounds = 150, 
+                         eta = 0.1, 
+                         max_depth = c(2,3,4), 
+                         num_class = NULL, 
+                         subsample = 0.8, 
+                         n_folds = 5, 
+                         alpha = 0,
+                         lambda = 0,
+                         bootstrap_sample = FALSE, 
+                         weights = NULL) {
   
   if (is.null(data)) {
     stop("Please provide some data")
@@ -42,20 +56,16 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
   independent <- all.vars(formula)[-1]
   dependent <- update(formula, . ~ .)[[2]] 
   
-  # Check if there are factor variables in the feature set
   if (any(sapply(resample, is.factor))) {
     
     features <- resample[independent]
     label <- resample[[dependent]]
-    # create data matrix
     features <- model.matrix(~ . - 1, data = features)
     
-    # Create the data matrix for the XGBoost function
     data_matrix <- xgb.DMatrix(data = as.matrix(features), label = as.matrix(label))
     
-    
   } else {
-    # Create the data matrix for the XGBoost function without factor variables in the feature set
+     
     features <- resample[independent]
     label <- resample[[dependent]]
     
@@ -63,7 +73,7 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
     
   }
   
-  # Hyperparameters search
+  
   nrounds_values <- nrounds
   
   best_max_depth <- NULL
@@ -91,10 +101,9 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
         model <- xgb.train(
           data = watchlist$train,
           objective = objective,
-          max_depth = depth,
-          eta =eta,
+          params = params,
           nrounds = nrounds,
-          num_class = num_class, # Adding the nun_class argument
+          num_class = num_class,  
           early_stopping_rounds = early_stopping,
           subsample = subsample,
           nthread = 1,
@@ -105,8 +114,7 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
         model <- xgb.train(
           data = watchlist$train,
           objective = objective,
-          max_depth = depth,
-          eta =eta,
+          params = params,
           nrounds = nrounds,
           early_stopping_rounds = early_stopping,
           subsample = subsample,
@@ -129,7 +137,6 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
       }
       
       
-      # Check if this combination has a lower RMSE than the previous best
       if (min_cv < best_test) {
         best_test <- min_cv
         best_max_depth <- depth
@@ -138,12 +145,11 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
     }
   }
   
-  # Split the data
   inTraining <- sample(1:nrow(resample), size = floor(p * nrow(resample)))
   training <- resample[inTraining, ]
   testing <- resample[-inTraining, ]
   
-  # Check if there are factor variables in the feature set
+  
   if (any(sapply(training, is.factor))) {
     
     train_features <- training[independent]
@@ -151,17 +157,16 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
     test_features <- testing[independent]
     test_label <- testing[[dependent]]
     
-    # create data matrix
     train_features <- model.matrix(~ . - 1, data = train_features)
     test_features <- model.matrix(~ . - 1, data = test_features)
     
-    # Create the data matrix for the XGBoost function
+    
     train_matrix <- xgb.DMatrix(data = as.matrix(train_features), label = as.matrix(train_label))
     test_matrix <- xgb.DMatrix(data = as.matrix(test_features), label = as.matrix(test_label))
     
     
   } else {
-    # Create the data matrix for the XGBoost function without factor variables in the feature set
+     
     train_features <- training[independent]
     train_label <- training[[dependent]]
     test_features <- testing[independent]
@@ -173,33 +178,35 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
   }
   
   # Model1
-  # Set best max depth
+ 
   if (objective %in% c("multi:softmax")) {
     params <- list(
       eta = eta,                      
       max_depth = best_max_depth,
-      num_class = num_class
+      num_class = num_class,
+      lambda = lambda
     ) 
     
   } else {
     params <- list(
       eta = eta,                      
-      max_depth = best_max_depth
+      max_depth = best_max_depth,
+      lambda = lambda
     )
     
   }
   
-  # Train the XGBoost models 
+  # Training!
   model1 <- xgboost(data = train_matrix,
                     objective = objective,
                     params = params,
                     nrounds = best_nrounds,
                     subsample = subsample,
-                    verbose=0,
+                    verbose = 0,
                     nthread = 1)
   
   # Get performance score model 1
-  # Check if the objective is classification or regression
+  
   if (objective %in% c("binary:logistic", "multi:softmax")) {
     
     # Predict on test set using model 1
@@ -222,7 +229,7 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
     
   } else {
     
-    # Predict on test set using model 1
+    
     predictions <- predict(model1, newdata = test_matrix)
     
     # Calculate RMSE
@@ -241,7 +248,7 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
     model2_train_features <- model.matrix(~ . - 1, data = model2_train_features)
     model2_train_matrix <- xgb.DMatrix(data = as.matrix(model2_train_features), label = as.matrix(train_label))
   } else {
-    # Create the data matrix for the XGBoost function without factor variables in the feature set
+     
     model2_train_features <- training[independent]
     model2_train_matrix <- xgb.DMatrix(data = as.matrix(model2_train_features), label = as.matrix(train_label))
   }
@@ -278,49 +285,4 @@ xgboost_test <- function(data = NULL, formula = NULL,  p = NULL,  objective = "r
   
   return(result)
 }
-
-
-# Testing example
-
-N = 2000
-p = 0.9
-data <- uniform_noise(N)
-
-test <- xgboost_test(data = data, formula = X3 ~ X4 + X1 + X2, p = p, eta = 0.1, bootstrap_sample = TRUE, weights = NULL)
-test
-
-output <- list()
-R = 200
-for (i in 1:R) {
-  
-  output[[i]] <- xgboost_test(data = data, formula = X3 ~ X4 + X1 + X2 , p = p, eta = 0.1,  bootstrap_sample = TRUE, weights = NULL)
-  # Calculate progress 
-  cat(sprintf("Bootstrap sample: %d\r", i))
-  flush.console()
-  Sys.sleep(0.1)
-  
-}
-
-output_df <- do.call(rbind, output)
-output_df <- data.frame(output_df)
-hist(as.numeric(output_df$diff_met2), breaks = 30)
-hist(as.numeric(output_df$diff_met1))
-
-output <- list()
-R = 200
-for (i in 1:R) {
-  weights <- matrix(rdirichlet(1, c(rep(1,nrow(data)))), nrow = nrow(data), ncol = 1)
-  output[[i]] <- xgboost_test(data = data, formula = X3 ~ X4 + X1 + X2, p = p, eta = 0.1,  bootstrap_sample = TRUE, weights = weights)
-  # Calculate progress 
-  cat(sprintf("Bootstrap sample: %d\r", i))
-  flush.console()
-  Sys.sleep(0.1)
-  
-}
-
-output_df2 <- do.call(rbind, output)
-output_df2 <- data.frame(output_df)
-hist(as.numeric(output_df2$diff_met2), breaks = 30)
-
-
 
