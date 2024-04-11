@@ -35,6 +35,8 @@ uniform_noise <- function(N) {
   df <- data.frame(X1, X2, X3, X4)
   return(df)
 }
+data <- uniform_noise(1000)
+plot(data$X3, data$X4)
 
 # Four variable DAG interaction with exponential error
 exponential_adjusted <- function(N) {
@@ -56,7 +58,8 @@ poisson_adjusted <- function(N){
   df <- data.frame(X1,X2,X3,X4)
   return(df)
 }
-
+data <- poisson_adjusted(1000)
+plot(data$X3, data$X4)
 
 # Five var DAG with different data types
 diff_data_types <- function(N) {

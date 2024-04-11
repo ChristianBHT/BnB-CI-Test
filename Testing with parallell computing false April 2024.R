@@ -1,4 +1,3 @@
-rm(list = ls())
 library(ipred)
 library(caret)
 library(Metrics)
@@ -7,16 +6,16 @@ library(pbapply)
 library(xgboost)
 library('GeneralisedCovarianceMeasure')
 ############################ Simulations ############################ 
-  
-  
-  
+
+
+
 cl <- makeCluster(detectCores()-1, type = "PSOCK")
 
 
-for (N in c(1000)){
+for (N in c(100, 500, 1000, 1500, 2000, 3000)){
   p = 0.8
-  R <- 200 
-  no_tests <- 500 
+  R <- 1000 
+  no_tests <- 50 
   seed <- N # Set seed for reproducibility
   
   output_matrix <- matrix(vector("list", no_tests * 2), nrow=no_tests, ncol = 2)
@@ -36,16 +35,16 @@ for (N in c(1000)){
     output <- list()
     
     for (j in 1:R) {
-      output[[j]] <- CItest_xgboost(data = data, formula = X4 ~ X3 + X1 + X2, p = p,  indices = NULL)
+      output[[j]] <- CItest_xgboost(data = data, formula = X4 ~ X3 + X1, p = p,  indices = NULL)
     }
     
-    cond_var <- data.frame(data$X1, data$X2)
+    cond_var <- data.frame(data$X1)
     gcm_test <- gcm.test(data$X4, data$X3, Z = cond_var)
     
-    return(list(Comp_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
+    return(list(Boot_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
   })
   # Save the output_matrix to a file
-  filename <- paste0("spesial_case_test_", N, ".rds")
+  filename <- paste0("normal_data_false_output_N_", N, ".rds")
   saveRDS(results, filename)
 }
 
@@ -77,16 +76,15 @@ for (N in c(100, 500, 1000, 1500, 2000, 3000)){
     output <- list()
     
     for (j in 1:R) {
-      output[[j]] <- CItest_xgboost(data = data, formula = X3 ~ X2 + X1, p = p,  indices = NULL)
+      output[[j]] <- CItest_xgboost(data = data, formula = X3 ~ X2, p = p,  indices = NULL)
     }
     
-    cond_var <- data.frame(data$X1)
-    gcm_test <- gcm.test(data$X3, data$X2, Z = cond_var)
+    gcm_test <- gcm.test(data$X3, data$X2)
     
-    return(list(Comp_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
+    return(list(Boot_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
   })
   # Save the output_matrix to a file
-  filename <- paste0("non_lin_fork_true_output_N_", N, ".rds")
+  filename <- paste0("non_lin_fork_false_output_N_", N, ".rds")
   saveRDS(results, filename)
 }
 
@@ -117,16 +115,16 @@ for (N in c(100, 500, 1000, 1500, 2000, 3000)){
     output <- list()
     
     for (j in 1:R) {
-      output[[j]] <- CItest_xgboost(data = data, formula = X4 ~ X3 + X2 + X1, p = p,  indices = NULL)
+      output[[j]] <- CItest_xgboost(data = data, formula = X4 ~ X3 + X2, p = p,  indices = NULL)
     }
     
-    cond_var <- data.frame(data$X1, data$X2)
+    cond_var <- data.frame(data$X2)
     gcm_test <- gcm.test(data$X4, data$X3, Z = cond_var)
     
-    return(list(Comp_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
+    return(list(Boot_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
   })
   # Save the output_matrix to a file
-  filename <- paste0("poisson_adjusted_true_output_N_", N, ".rds")
+  filename <- paste0("poisson_adjusted_false_output_N_", N, ".rds")
   saveRDS(results, filename)
 }
 
@@ -156,16 +154,16 @@ for (N in c(100, 500, 1000, 1500, 2000, 3000)){
     output <- list()
     
     for (j in 1:R) {
-      output[[j]] <- CItest_xgboost(data = data, formula = X4 ~ X3 + X2 + X1, p = p,  indices = NULL)
+      output[[j]] <- CItest_xgboost(data = data, formula = X4 ~ X3 + X2, p = p,  indices = NULL)
     }
     
-    cond_var <- data.frame(data$X1, data$X2)
+    cond_var <- data.frame(data$X2)
     gcm_test <- gcm.test(data$X4, data$X3, Z = cond_var)
     
-    return(list(Comp_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
+    return(list(Boot_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
   })
   # Save the output_matrix to a file
-  filename <- paste0("uniform_noise_true_output_N_", N, ".rds")
+  filename <- paste0("uniform_noise_false_output_N_", N, ".rds")
   saveRDS(results, filename)
 }
 
@@ -195,61 +193,17 @@ for (N in c(100, 500, 1000, 1500, 2000, 3000)){
     output <- list()
     
     for (j in 1:R) {
-      output[[j]] <- CItest_xgboost(data = data, formula = X4 ~ X3 + X2 + X1, p = p,  indices = NULL)
+      output[[j]] <- CItest_xgboost(data = data, formula = X4 ~ X3 + X2, p = p,  indices = NULL)
     }
     
-    cond_var <- data.frame(data$X1, data$X2)
+    cond_var <- data.frame(data$X2)
     gcm_test <- gcm.test(data$X4, data$X3, Z = cond_var)
     
-    return(list(Comp_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
+    return(list(Boot_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
   })
   # Save the output_matrix to a file
-  filename <- paste0("exponential_adjusted_true_output_N_", N, ".rds")
+  filename <- paste0("exponential_adjusted_false_output_N_", N, ".rds")
   saveRDS(results, filename)
 }
 
 stopCluster(cl)
-
-
-cl <- makeCluster(detectCores()-1, type = "PSOCK")
-for (N in c(100, 500, 1000, 1500, 2000, 3000)){
-  p = 0.8
-  R <- 1000 
-  no_tests <- 50 
-  seed <- N # Set seed for reproducibility
-  
-  output_matrix <- matrix(vector("list", no_tests * 2), nrow=no_tests, ncol = 2)
-  
-  clusterExport(cl,  varlist=c('random_Z_effects', 'CItest_xgboost', 'N', 'R', 'p', 'seed', 'no_tests'), envir=environment())
-  clusterEvalQ(cl, c(library('caret'),
-                     library('Metrics'),
-                     library('dplyr'),
-                     library('xgboost'),
-                     library('GeneralisedCovarianceMeasure')))
-  
-  results <- pblapply(cl=cl, 1:no_tests, function(i){
-    local_seed <- seed + i # Update seed for each test
-    set.seed(local_seed)
-    
-    data <- random_Z_effects(N, Zs = 5)
-    output <- list()
-    
-    for (j in 1:R) {
-      output[[j]] <- CItest_xgboost(data = data, formula = Y ~ X + Z1 + Z2 + Z3 + Z4 + Z5, p = p,  indices = NULL)
-    }
-    
-    cond_var <- data.frame(data$Z1, data$Z2, data$Z3, data$Z4, data$Z5)
-    gcm_test <- gcm.test(data$X, data$Y, Z = cond_var)
-    
-    return(list(Comp_CI = output, gcm_test_p = gcm_test$p.value, gcm_reject = gcm_test$reject))
-  })
-  # Save the output_matrix to a file
-  filename <- paste0("5Zs_true_output_N_", N, ".rds")
-  saveRDS(results, filename)
-}
-
-stopCluster(cl)
-
-
-
-  
