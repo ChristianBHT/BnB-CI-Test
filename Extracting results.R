@@ -159,8 +159,8 @@ for (i in 1:200) {
   p_value <- p_values[i]
   
   # text(x = max(rmse_data, na.rm = TRUE) * 0.8, y = 40, 
-       # labels = paste("GCM p-value:", format(p_value, digits = 4)), 
-       # col = "red", cex = 1.2)
+  # labels = paste("GCM p-value:", format(p_value, digits = 4)), 
+  # col = "red", cex = 1.2)
   
 }
 hist(r2_data)

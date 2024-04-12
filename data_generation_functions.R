@@ -26,6 +26,16 @@ non_lin_fork <- function(N){
   return(df)
 }
 
+# The fork non-linear normal error
+non_lin_normal <- function(N){
+  X1 = rnorm(N,1,1)
+  X2 = rnorm(N,0,1)
+  X3 = exp(X1*X2) + rnorm(N,0,1)
+  X4 <- X1*X2 + rnorm(N,0,1)
+  df <- data.frame(X1,X2,X3,X4)
+  return(df)
+}
+
 # Four variable DAG interaction with uniform error
 uniform_noise <- function(N) {
   X1 = rnorm(N, 0, 1)
@@ -53,13 +63,13 @@ exponential_adjusted <- function(N) {
 poisson_adjusted <- function(N){
   X1 = rnorm(N,0,1)
   X2 = rnorm(N,0,1)
-  X3 = exp(X2*X1) + (rpois(N, lambda = 3)-3)
-  X4 = X2*X1  + (rpois(N, lambda = 3)-3)
+  X3 = X2*X1 + (rpois(N, lambda = 1)-1)
+  X4 = X2*X1  + (rpois(N, lambda = 1)-1)
   df <- data.frame(X1,X2,X3,X4)
   return(df)
 }
-data <- poisson_adjusted(1000)
-plot(data$X3, data$X4)
+data <- poisson_adjusted(2000)
+plot(data$X4, data$X3)
 
 # Five var DAG with different data types
 diff_data_types <- function(N) {

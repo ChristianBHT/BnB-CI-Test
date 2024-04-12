@@ -1,6 +1,5 @@
 CItest_xgboost <- function(formula = NULL,
                            data = NULL,
-                           indices,
                            p = NULL,
                            objective = "reg:squarederror",
                            nrounds = 100,
@@ -19,13 +18,6 @@ CItest_xgboost <- function(formula = NULL,
   if (!(class(formula) %in% "formula")) {
     formula <- as.formula(formula)
   }
-  
-  if (is.null(indices)) {
-    data <- data
-  } else {
-    data <- data[indices, ]
-  }
-  
   
   # Split the data
   inTraining <- sample(1:nrow(data), size = floor(p * nrow(data)))
@@ -100,9 +92,8 @@ CItest_xgboost <- function(formula = NULL,
     mod1_metric2 <- cor(predictions, test_label)^2
   }
   
-  # Replacing the variable with the reshuffled variable
-  # Replacing the variable with the reshuffled variable
   training[independent[[1]]] <- sample(training[[independent[1]]]) 
+  testing[independent[[1]]] <- sample(testing[[independent[1]]]) #Permutation in both sets 
   # Creating new feature set, same steps as above
   if (any(sapply(training, is.factor))) {
     train_features <- training[independent]
@@ -157,3 +148,200 @@ CItest_xgboost <- function(formula = NULL,
   }
   return(result)
 }
+
+
+NullGenerator <- function(formula = NULL,
+                          data = NULL,
+                          p = NULL,
+                          objective = "reg:squarederror",
+                          nrounds = 100,
+                          eta = 0.1,
+                          max_depth = 6,
+                          num_class = NULL,
+                          nthread = 1) {
+  if (is.null(data)) {
+    stop("Please provide some data")
+  }
+  
+  if (is.null(p)) {
+    stop("Please provide the parameter p (size of training set)")
+  }
+  
+  if (!(class(formula) %in% "formula")) {
+    formula <- as.formula(formula)
+  }
+  
+  independent <- all.vars(formula)[-1]
+  dependent <- update(formula, . ~ .)[[2]]
+  
+  data[independent[[1]]] <- sample(data[[independent[1]]]) 
+  
+  inTraining <- sample(1:nrow(data), size = floor(p * nrow(data)))
+  training <- data[inTraining, ]
+  testing <- data[-inTraining, ]
+  
+  
+  
+  if (any(sapply(training, is.factor))) {
+    train_features <- training[independent]
+    train_label <- training[[dependent]]
+    
+    test_features <- testing[independent]
+    test_label <- testing[[dependent]]
+    
+    train_features <- model.matrix(~ . - 1, data = train_features)
+    test_features <- model.matrix(~ . - 1, data = test_features)
+    
+    train_matrix <- xgboost::xgb.DMatrix(data = as.matrix(train_features), label = as.matrix(train_label))
+    test_matrix <- xgboost::xgb.DMatrix(data = as.matrix(test_features), label = as.matrix(test_label))
+  } else {
+    train_features <- training[independent]
+    train_label <- training[[dependent]]
+    
+    test_features <- testing[independent]
+    test_label <- testing[[dependent]]
+    
+    train_matrix <- xgboost::xgb.DMatrix(data = as.matrix(train_features), label = as.matrix(train_label))
+    test_matrix <- xgboost::xgb.DMatrix(data = as.matrix(test_features), label = as.matrix(test_label))
+  }
+  
+  if (objective %in% "multi:softmax") {
+    params <- list(
+      eta = eta,
+      max_depth = max_depth,
+      num_class = num_class
+    )
+  } else {
+    params <- list(
+      eta = eta,
+      max_depth = max_depth
+    )
+  }
+  
+  m <- xgboost::xgb.train(data = train_matrix,
+                          objective = objective,
+                          params = params,
+                          nrounds = nrounds,
+                          verbose=0,
+                          nthread = nthread)
+  
+  if (objective %in% c("binary:logistic", "multi:softmax")) {
+    predictions <- predict(m, test_matrix)
+    if (objective %in% "binary:logistic") {
+      predictions <- ifelse(predictions > 0.5, 1, 0)
+    }
+    conf_matrix <- caret::confusionMatrix(as.factor(predictions), as.factor(test_label))
+    metric1 <- conf_matrix$overall[1]
+    metric2 <- conf_matrix$overall[2]
+  } else {
+    predictions <- predict(m, newdata = test_matrix)
+    metric1 <- Metrics::rmse(test_label, predictions)
+    metric2 <- cor(predictions, test_label)^2
+  }
+  
+  result <- c(metric1, metric2)
+  
+  
+  return(result)
+}
+
+TestGenerator <- function(formula = NULL,
+                          data = NULL,
+                          indices,
+                          p = NULL,
+                          objective = "reg:squarederror",
+                          nrounds = 100,
+                          eta = 0.1,
+                          max_depth = 6,
+                          num_class = NULL,
+                          nthread = 1) {
+  if (is.null(data)) {
+    stop("Please provide some data")
+  }
+  
+  if (is.null(p)) {
+    stop("Please provide the parameter p (size of training set)")
+  }
+  
+  if (!(class(formula) %in% "formula")) {
+    formula <- as.formula(formula)
+  }
+  
+  inTraining <- sample(1:nrow(data), size = floor(p * nrow(data)))
+  training <- data[inTraining, ]
+  testing <- data[-inTraining, ]
+  
+  independent <- all.vars(formula)[-1]
+  dependent <- update(formula, . ~ .)[[2]]
+  
+  if (any(sapply(training, is.factor))) {
+    train_features <- training[independent]
+    train_label <- training[[dependent]]
+    
+    test_features <- testing[independent]
+    test_label <- testing[[dependent]]
+    
+    train_features <- model.matrix(~ . - 1, data = train_features)
+    test_features <- model.matrix(~ . - 1, data = test_features)
+    
+    train_matrix <- xgboost::xgb.DMatrix(data = as.matrix(train_features), label = as.matrix(train_label))
+    test_matrix <- xgboost::xgb.DMatrix(data = as.matrix(test_features), label = as.matrix(test_label))
+  } else {
+    train_features <- training[independent]
+    train_label <- training[[dependent]]
+    
+    test_features <- testing[independent]
+    test_label <- testing[[dependent]]
+    
+    train_matrix <- xgboost::xgb.DMatrix(data = as.matrix(train_features), label = as.matrix(train_label))
+    test_matrix <- xgboost::xgb.DMatrix(data = as.matrix(test_features), label = as.matrix(test_label))
+  }
+  
+  if (objective %in% "multi:softmax") {
+    params <- list(
+      eta = eta,
+      max_depth = max_depth,
+      num_class = num_class
+    )
+  } else {
+    params <- list(
+      eta = eta,
+      max_depth = max_depth
+    )
+  }
+  
+  m <- xgboost::xgb.train(data = train_matrix,
+                          objective = objective,
+                          params = params,
+                          nrounds = nrounds,
+                          verbose=0,
+                          nthread = nthread)
+  
+  if (objective %in% c("binary:logistic", "multi:softmax")) {
+    predictions <- predict(m, test_matrix)
+    if (objective %in% "binary:logistic") {
+      predictions <- ifelse(predictions > 0.5, 1, 0)
+    }
+    conf_matrix <- caret::confusionMatrix(as.factor(predictions), as.factor(test_label))
+    metric1 <- conf_matrix$overall[1]
+    metric2 <- conf_matrix$overall[2]
+  } else {
+    predictions <- predict(m, newdata = test_matrix)
+    metric1 <- Metrics::rmse(test_label, predictions)
+    metric2 <- cor(predictions, test_label)^2
+  }
+  
+  if (objective %in% c("binary:logistic", "multi:softmax")) {
+    result <- c(metric1, metric2)
+    
+  } else {
+    result <- c(metric1, metric2)
+    
+  }
+  return(result)
+}
+
+
+
+
+
