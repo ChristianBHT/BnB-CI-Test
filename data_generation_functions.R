@@ -28,7 +28,7 @@ non_lin_fork <- function(N){
 
 # The fork non-linear normal error
 non_lin_normal <- function(N){
-  X1 = rnorm(N,1,1)
+  X1 = rnorm(N,0,1)
   X2 = rnorm(N,0,1)
   X3 = exp(X1*X2) + rnorm(N,0,1)
   X4 <- X1*X2 + rnorm(N,0,1)
@@ -45,14 +45,12 @@ uniform_noise <- function(N) {
   df <- data.frame(X1, X2, X3, X4)
   return(df)
 }
-data <- uniform_noise(1000)
-plot(data$X3, data$X4)
 
 # Four variable DAG interaction with exponential error
-exponential_adjusted <- function(N) {
+exponential_adjusted <- function(N, rate_param = 1) {
   X1 = rnorm(N, 0, 1)
   X2 = rnorm(N, 0, 1)
-  rate_param = 1
+  rate_param = rate_param
   X3 = X2 + X1 + X2 * X1 + rexp(N, rate = rate_param) - (1 / rate_param)
   X4 = X2 + X1 + X2 * X1 + rexp(N, rate = rate_param) - (1 / rate_param)
   df <- data.frame(X1, X2, X3, X4)
@@ -68,30 +66,51 @@ poisson_adjusted <- function(N){
   df <- data.frame(X1,X2,X3,X4)
   return(df)
 }
-data <- poisson_adjusted(2000)
-plot(data$X4, data$X3)
 
-# Five var DAG with different data types
-diff_data_types <- function(N) {
+binary_data <- function(N) {
   X1 <- rnorm(N)
-  X2 <- rnorm(N,exp(X1),1) 
-  x3b1 <- X1 + X2 - X1*X2
-  x3b2 <- X1 + X2 + X1*X2
-  x3p1 <- 1/(1+exp(x3b1) + exp(x3b2))
-  x3p2 <- exp(x3b1) /(1+exp(x3b1) + exp(x3b2))
-  random <- runif(N,0, 1)
-  X3 <- ifelse(random < x3p1, 1, ifelse(random < x3p1 + x3p2,2,3))
-  X4 <- X1 - X2 + X1*X2  + rnorm(N)
-  x5b1 = X4 - X3  
-  x5p1 = 1/(1+exp(x5b1))
-  random = runif(N,0,1)
-  X5 = ifelse(random < x5p1, 0, 1)
-  df <- data.frame(X1,X2,X3,X4,X5)
-  hist(X5)
-  return(df)
+  X2 <- rnorm(N)
+  X3 <- if_else(X1*X2 + rnorm(N) > mean(X1*X2),1,0)
+  X4 <- if_else(X1*X2 + rnorm(N) < mean(X1*X2),1,0)
+  data_frame <- data.frame(X1, X2, X3, X4)
+  
+  return(data_frame)
 }
 
-# Variable DAG with random noise variables randomly influencing X and Y
+diff_data_types <- function(N) {
+  X1 <- rnorm(N)
+  X2 <- rnorm(N)
+  X3 <- numeric(N)  
+  X4 <- numeric(N)  
+  
+  for (i in 1:N) {
+    if (X1[i] < 0 && X2[i] < 0) {
+      X3[i] <- 0
+    } else if (X1[i] < 0 && X2[i] >= 0) {
+      X3[i] <- 1
+    } else if (X1[i] >= 0 && X2[i] < 0) {
+      X3[i] <- 2
+    } else {
+      X3[i] <- 3
+    }
+    
+    if (X1[i] + X2[i] < -1) {
+      X4[i] <- 0
+    } else if (X1[i] + X2[i] < 0) {
+      X4[i] <- 1
+    } else if (X1[i] + X2[i] < 1) {
+      X4[i] <- 2
+    } else {
+      X4[i] <- 3
+    }
+  }
+  
+  data_frame <- data.frame(X1, X2, X3, X4)
+  
+  return(data_frame)
+}
+
+
 random_Z_effects <- function(N, Zs = 10) {
   Z <- data.frame(matrix(ncol = Zs, nrow = N))
   names(Z) <- paste0("Z", 1:Zs)
@@ -99,11 +118,11 @@ random_Z_effects <- function(N, Zs = 10) {
   error_functions <- list(
     normal = function(n) rnorm(n, mean = 0, sd = 1),
     uniform = function(n) runif(n, min = -2, max = 2),
-    exp_adjusted = function(n) rexp(n, rate = 1) - 1 # Adjusted to have mean 0
+    exp_adjusted = function(n) rexp(n, rate = 1) - 1 
   )
 
   for (i in 1:Zs) {
-    error_type <- sample(names(error_functions), 1) # Randomly select an error type
+    error_type <- sample(names(error_functions), 1) 
     Z[, i] <- error_functions[[error_type]](N)
   }
   
