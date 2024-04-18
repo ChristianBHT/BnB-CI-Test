@@ -2,6 +2,7 @@
 # bruk RMSE istenden for P-verdi, og legg til MSE og ut med R^2
 # Stratified cross validation?
 
+
 NullGenerator <- function(formula = NULL,
                           data = NULL,
                           p = NULL,
@@ -68,7 +69,7 @@ NullGenerator <- function(formula = NULL,
       max_depth = max_depth
     )
   }
-
+  
   m <- xgboost::xgb.train(data = train_matrix,
                           objective = objective,
                           params = params,
@@ -79,12 +80,11 @@ NullGenerator <- function(formula = NULL,
   if (objective %in% "binary:logistic") {
     predictions <- predict(m, test_matrix)  
     log_loss <- -mean(test_label*log(predictions) + (1 - test_label) * log(1 - predictions))
-
+    
     pred_class <- ifelse(predictions > 0.5, 1, 0)
-    conf_matrix <- caret::confusionMatrix(as.factor(pred_class), as.factor(test_label))
     
     metric1 <- log_loss
-    metric2 <- conf_matrix$overall[2]
+    metric2 <- DescTools::CohenKappa(table(pred_class, test_label))
     
   } else if (objective %in% "multi:softprob") {
     predictions <- predict(m, test_matrix)  
@@ -103,8 +103,8 @@ NullGenerator <- function(formula = NULL,
     metric2 <- Metrics::mse(test_label, predictions)
   }
   
-  result <- c(as.numeric(metric1), as.numeric(metric2), m$params$objective, formula, p)
-  names(result) <- c("Metric1", "Metric2", "Objective", "Formula", 'P')
+  result <- c(as.numeric(metric1), as.numeric(metric2))
+  names(result) <- c("Metric1", "Metric2")
   
   return(result)
 }
@@ -191,13 +191,12 @@ TestGenerator <- function(formula = NULL,
   
   if (objective %in% "binary:logistic") {
     predictions <- predict(m, test_matrix)  
-    log_loss <- -mean(test_label*log(predictions) + (1 - test_label) * log(1 - predictions))
-    
     pred_class <- ifelse(predictions > 0.5, 1, 0)
-    conf_matrix <- caret::confusionMatrix(as.factor(pred_class), as.factor(test_label))
     
+    log_loss <- -mean(test_label*log(predictions) + (1 - test_label) * log(1 - predictions))
+    CohenKappa <- DescTools::CohenKappa(table(pred_class, test_label))
     metric1 <- log_loss
-    metric2 <- conf_matrix$overall[2]
+    metric2 <- CohenKappa
     
   } else if (objective %in% "multi:softprob") {
     predictions <- predict(m, test_matrix)  
@@ -220,56 +219,44 @@ TestGenerator <- function(formula = NULL,
   return(result)
 }
 
-# Not used
-get_pvalues <- function(null_distr, p_values = 30, p = 0.9) {
-  formula = as.formula(as.character(null_distr[1,4]))
-  objective = null_distr[1,3]
+
+
+
+get_pvalues <- function(objective, NullDist, test1_metric, test2_metric) {
   
-  p_value1 <- list()
-  p_value2 <- list()
-  param_p_value1 <- list()
-  param_p_value2 <- list()
-  for (i in 1:p_values) {
-    test <- TestGenerator(data = data, formula = formula, p = p)
-    
-    if (objective %in% c('reg:squarederror')) {
-      
-      p_value1[i] <- (sum(null_distr[1] <= test[[1]])+1) / (nrow(null_distr)+1)
-      p_value2[i] <- (sum(null_distr[2] >= test[[2]])+1) / (nrow(null_distr)+1)
-      Z1 <- (test[[1]]-mean(unlist(null_distr[1])))/sd(unlist(null_distr[1]))
-      param_p_value1[i] <- pnorm(Z1)
-      Z2 <- (test[[2]]-mean(as.numeric(unlist(null_distr[2]))))/sd(as.numeric(unlist(null_distr[2])))
-      param_p_value2[i] <- 1-pnorm(Z2)
-      
-    } else if (objective %in% c('binary:logistic', 'multi:softmax')) {
-      
-      p_value1[i] <- (sum(null_distr[1] >= test[[1]])+1) / (nrow(null_distr)+1)
-      p_value2[i] <- (sum(null_distr[2] >= test[[2]])+1) / (nrow(null_distr)+1)
-      Z1 <- (test[[1]]-mean(unlist(null_distr[1])))/sd(unlist(null_distr[1]))
-      param_p_value1[i] <- 1 - pnorm(Z1)
-      Z2 <- (test[[2]]-mean(as.numeric(unlist(null_distr[2]))))/sd(as.numeric(unlist(null_distr[2])))
-      param_p_value2[i] <- 1 - pnorm(Z2)
-      
-    }
-    
-    cat(sprintf("Calculating P-values: %d\r", i))
-    flush.console()
-    Sys.sleep(0.1)
-    
+  NullDist1 <- as.numeric(NullDist[,1])
+  NullDist2 <- as.numeric(NullDist[,2])
+  test1_metric <- as.numeric(test1_metric)
+  test2_metric <- as.numeric(test2_metric)
+  
+  mean_NullDist1 <- mean(NullDist1)
+  mean_NullDist2 <- mean(NullDist2)
+  sd_NullDist1 <- sd(NullDist1)
+  sd_NullDist2 <- sd(NullDist2)
+  
+  mean_test1_metric <- mean(test1_metric)
+  mean_test2_metric <- mean(test2_metric)
+  
+  p_value1 <- (sum(NullDist1 <= mean_test1_metric) + 1) / (length(NullDist1) + 1)
+  p_value2 <- if (objective %in% 'reg:squarederror') {
+    (sum(NullDist2 <= mean_test2_metric) + 1) / (length(NullDist2) + 1)
+  } else {
+    (sum(NullDist2 >= mean_test2_metric) + 1) / (length(NullDist2) + 1)
   }
   
-  p_values_df <- data.frame(
-    P_Value1 = p_value1,
-    Param_P_Value1 = param_p_value1,
-    P_Value2 = p_value2,
-    Param_P_Value2 = param_p_value2
-  )
+  Z1 <- (mean_test1_metric - mean_NullDist1) / sd_NullDist1
+  Z2 <- (mean_test2_metric - mean_NullDist2) / sd_NullDist2
   
-  return(p_values_df)
+  param_p_value1 <- pnorm(Z1)
+  param_p_value2 <- if (objective %in% 'reg:squarederror') {
+    pnorm(Z2)
+  } else {
+    1-pnorm(Z2)
+  }
+  result <- c(p_value1, p_value2, param_p_value1, param_p_value2)
+  names(result) <- c('emp_p_value1', 'emp_p_value2','par_p_value1', 'par_p_value2' )
+  return(c(p_value1, p_value2, param_p_value1, param_p_value2))
 }
-
-
-
 
 
 
