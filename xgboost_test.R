@@ -1,8 +1,4 @@
 
-# bruk RMSE istenden for P-verdi, og legg til MSE og ut med R^2
-# Stratified cross validation?
-
-
 NullGenerator <- function(formula = NULL,
                           data = NULL,
                           p = NULL,
@@ -30,9 +26,15 @@ NullGenerator <- function(formula = NULL,
   
   data[independent[[1]]] <- sample(data[[independent[1]]]) 
   
-  inTraining <- sample(1:nrow(data), size = floor(p * nrow(data)))
-  training <- data[inTraining, ]
-  testing <- data[-inTraining, ]
+  if (objective %in% "reg:squarederror") {
+    inTraining <- sample(1:nrow(data), size = floor(p * nrow(data)))
+    training <- data[inTraining, ]
+    testing <- data[-inTraining, ]
+  } else if (objective %in% c('binary:logistic', 'multi:softprob')) {
+    inTraining <- caret::createDataPartition(y = factor(data[[dependent]]), p = p, list = FALSE)
+    training <- data[inTraining, ]
+    testing <- data[-inTraining, ]
+  }
   
   if (any(sapply(training, is.factor))) {
     train_features <- training[independent]
@@ -80,28 +82,41 @@ NullGenerator <- function(formula = NULL,
   if (objective %in% "binary:logistic") {
     predictions <- predict(m, test_matrix)  
     log_loss <- -mean(test_label*log(predictions) + (1 - test_label) * log(1 - predictions))
+    metric1 <- log_loss
     
     pred_class <- ifelse(predictions > 0.5, 1, 0)
+    conf_matrix <- try(caret::confusionMatrix(factor(pred_class, levels = levels(factor(test_label))), factor(test_label)), silent = TRUE)
     
-    metric1 <- log_loss
-    metric2 <- DescTools::CohenKappa(table(pred_class, test_label))
+    if (inherits(conf_matrix, "try-error")) {
+      metric2 <- NA
+    } else {
+      metric2 <- conf_matrix$overall[2]
+    }
+    
     
   } else if (objective %in% "multi:softprob") {
     predictions <- predict(m, test_matrix)  
     pred <- matrix(predictions, ncol=num_class, byrow=TRUE)
     log_loss <- multi_class_log_loss(actual = test_label, predicted = pred)
+    metric1 <- log_loss
     
     pred_class <- max.col(pred) - 1
-    conf_matrix <- caret::confusionMatrix(as.factor(pred_class), as.factor(test_label))
+    conf_matrix <- try(caret::confusionMatrix(factor(pred_class, levels = levels(factor(test_label))), factor(test_label)), silent = TRUE)
     
-    metric1 <- log_loss
-    metric2 <- conf_matrix$overall[2]
+    if (inherits(conf_matrix, "try-error")) {
+      metric2 <- NA
+    } else {
+      metric2 <- conf_matrix$overall[2]
+    }
+    
+    
   } else {
     predictions <- predict(m, test_matrix)
     
     metric1 <- Metrics::rmse(test_label, predictions)
     metric2 <- Metrics::mse(test_label, predictions)
   }
+
   
   result <- c(as.numeric(metric1), as.numeric(metric2))
   names(result) <- c("Metric1", "Metric2")
@@ -139,12 +154,19 @@ TestGenerator <- function(formula = NULL,
     formula <- as.formula(formula)
   }
   
-  inTraining <- sample(1:nrow(data), size = floor(p * nrow(data)))
-  training <- data[inTraining, ]
-  testing <- data[-inTraining, ]
-  
   independent <- all.vars(formula)[-1]
   dependent <- update(formula, . ~ .)[[2]]
+  
+  if (objective %in% "reg:squarederror") {
+    inTraining <- sample(1:nrow(data), size = floor(p * nrow(data)))
+    training <- data[inTraining, ]
+    testing <- data[-inTraining, ]
+  } else if (objective %in% c('binary:logistic', 'multi:softprob')) {
+    inTraining <- caret::createDataPartition(y = factor(data[[dependent]]), p = p, list = FALSE)
+    training <- data[inTraining, ]
+    testing <- data[-inTraining, ]
+  }
+  
   
   if (any(sapply(training, is.factor))) {
     train_features <- training[independent]
@@ -191,23 +213,34 @@ TestGenerator <- function(formula = NULL,
   
   if (objective %in% "binary:logistic") {
     predictions <- predict(m, test_matrix)  
-    pred_class <- ifelse(predictions > 0.5, 1, 0)
-    
     log_loss <- -mean(test_label*log(predictions) + (1 - test_label) * log(1 - predictions))
-    CohenKappa <- DescTools::CohenKappa(table(pred_class, test_label))
     metric1 <- log_loss
-    metric2 <- CohenKappa
+    
+    pred_class <- ifelse(predictions > 0.5, 1, 0)
+    conf_matrix <- try(caret::confusionMatrix(factor(pred_class, levels = levels(factor(test_label))), factor(test_label)), silent = TRUE)
+    
+    if (inherits(conf_matrix, "try-error")) {
+      metric2 <- NA
+    } else {
+        metric2 <- conf_matrix$overall[2]
+    }
     
   } else if (objective %in% "multi:softprob") {
     predictions <- predict(m, test_matrix)  
     pred <- matrix(predictions, ncol=num_class, byrow=TRUE)
     log_loss <- multi_class_log_loss(actual = test_label, predicted = pred)
     
-    pred_class <- max.col(pred) - 1
-    conf_matrix <- caret::confusionMatrix(as.factor(pred_class), as.factor(test_label))
-    
     metric1 <- log_loss
-    metric2 <- conf_matrix$overall[2]
+    
+    pred_class <- max.col(pred) - 1
+    conf_matrix <- try(caret::confusionMatrix(factor(pred_class, levels = levels(factor(test_label))), factor(test_label)), silent = TRUE)
+    
+    if (inherits(conf_matrix, "try-error")) {
+      metric2 <- NA 
+    } else {
+      metric2 <- conf_matrix$overall[2]
+    }
+    
   } else {
     predictions <- predict(m, test_matrix)
     
@@ -215,7 +248,8 @@ TestGenerator <- function(formula = NULL,
     metric2 <- Metrics::mse(test_label, predictions)
   }
   
-  result <- c(as.numeric(metric1), as.numeric(metric2))  
+  result <- c(as.numeric(metric1), as.numeric(metric2))
+  names(result) <- c("Metric1", "Metric2")
   return(result)
 }
 

@@ -8,16 +8,6 @@ normal_data <- function(N){
   return(df)
 }
 
-# The fork
-# normal_fork <- function(N){
-#   X1 = rnorm(N,0,1)
-#   X2 = rnorm(N,X1,1)
-#   X3 = rnorm(N,X1,1)
-#   df <- data.frame(X1, X2, X3)
-#   return(df)
-# }
-# 
-
 hierarchical_data <- function(N, groups = 4) {
   group <- rep(1:groups, each = N/groups)
   X1 <- rnorm(N) + group
